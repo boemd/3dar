@@ -126,16 +126,28 @@ for i = 1:H
         else
             r=0;
         end
-        vp_h = [X(i+r, j)-X(i-r, j), Y(i+r, j)-Y(i-r, j), Sii(I_Pz, i+1, j, r-1)- Sii(I_Pz, i-1, j, r-1)]/2;
-        vp_v = [X(i, j+r)-X(i, j-r), Y(i, j+r)-Y(i, j-r), Sii(I_Pz, i, j+1, r-1)- Sii(I_Pz, i, j-1, r-1)]/2;
-        normals(i,j)=cross(vp_h,vp_v);
+        vp_h = [X(lim(i+r, 1, H), j)-X(lim(i-r, 1, H), j), Y(lim(i+r, 1, H), j)-Y(lim(i-r, 1, H), j), Sii(I_Pz, lim(i+1, 1, H), j, r-1, H, W)- Sii(I_Pz, lim(i-1, 1, H), j, r-1, H, W)]/2;
+        vp_v = [X(i, lim(j+r, 1, W))-X(i, lim(j-r, 1, W)), Y(i, lim(j+r, 1, W))-Y(i, lim(j-r, 1, W)), Sii(I_Pz, i, lim(j+1, 1, W), r-1, H, W)- Sii(I_Pz, i, lim(j-1, 1, W), r-1, H, W)]/2;
+        normals(i,j,:)=cross(vp_h,vp_v);
     end
 end
 
 
 
 
-function s = Sii(Io, i, j, r)
-    s = Io(i+r, j + r) - Io(i-r, j+r) - Io(i+r, j-r) + Io(i-r, j-r);
+
+
+function s = Sii(Io, i, j, r, H, W)
+    
+    s = Io(lim(i+r, 1, H), lim(j+r, 1, W)) - Io(lim(i-r, 1, H), lim(j+r, 1, W)) - Io(lim(i+r, 1, H), lim(j-r, 1, W)) + Io(lim(i-r, 1, H), lim(j-r, 1, W));
     s = s/(4*r^2);
+end
+
+function v = lim(a, m, M)
+    v = a;
+    if (a < m)
+        v = m;
+    elseif (a > M)
+        v = M;
+    end    
 end
