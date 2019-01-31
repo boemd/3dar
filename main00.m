@@ -2,7 +2,7 @@ close all;
 clear;
 clc;
 
-addpath('data/dataset2');
+addpath('../data/dataset2');
 
 %data
 %{
