@@ -12,10 +12,11 @@ load(LABELED_DATASET_PATH, 'rawDepthFilenames', 'rawRgbFilenames');
 load(LABELED_DATASET_PATH, 'images');
 load(LABELED_DATASET_PATH, 'rawDepths');
 %%
+clc
 img_idx=20;
 alpha = 0.0028;
-beta = 6; %to arrange
-gamma = 10; %to arrange
+beta = 6; %to arrange better
+gamma = 6; %to arrange better
 
 
 imgRgb =images(:, :, :, img_idx);
@@ -33,6 +34,7 @@ figure(1);
 %subplot(1, 2, 1);
 imshow(imgRgb);
 title('Color input');
+hold on;
 %subplot(1, 2, 2);
 %k=histeq(imgDepthAbs, [0, 255]);
 %imshow(k);
@@ -64,6 +66,12 @@ pts(:, :, 4) = imgRgb(:, :, 1);  %r component
 pts(:, :, 5) = imgRgb(:, :, 2);  %g component
 pts(:, :, 6) = imgRgb(:, :, 3);  %b component
 
+imgHsv = rgb2hsv(imgRgb);
+pts2 = zeros(H, W, 4);
+pts2(:, :, 1) = Z;  
+pts2(:, :, 2) = imgHsv(:, :, 1);  %h component
+pts2(:, :, 3) = imgHsv(:, :, 2);  %s component
+pts2(:, :, 4) = imgHsv(:, :, 3);  %v component
 
 %
 Px = pts(:, :, 1);
@@ -131,8 +139,11 @@ for i = 1:H
         normals(i,j,:)=cross(vp_h,vp_v);
     end
 end
+Nx=normals(:, :, 1);
+Ny=normals(:, :, 2);
+Nz=normals(:, :, 3);
 %{
-
+figure(2)
 quiver3(X,Y,Z, normals(:, :, 1),normals(:, :, 2),normals(:, :, 3), 30)
 hold on
 view(-300,400)
@@ -141,20 +152,34 @@ hold off
 
 %}
 
-
+norm_dist = zeros(480, 640, 4);
+norm_dist(:,:,1)=Nx;
+norm_dist(:,:,2)=Ny;
+norm_dist(:,:,3)=Nz;
+norm_dist(:,:,4)=Z;
 norm_cols = reshape(normals, [], 3);
-num_clusters = 40;
+num_clusters = 8;
 idxs = kmeans(norm_cols, num_clusters);
 idxs = reshape(idxs, 480, 640, []);
 
-figure
-Nx=normals(:, :, 1);
-Ny=normals(:, :, 2);
-Nz=normals(:, :, 3);
+
+figure(3)
 
 for j=1:num_clusters
-    quiver3(X(idxs==j),Y(idxs==j),Z(idxs==j), Nx(idxs==j), Ny(idxs==j), Nz(idxs==j), 3, 'MarkerEdgeColor', rand(1,3))
-    hold on
+    pts2 = reshape(pts2, [], 4);
+    xxx=[];
+    for a=1:480*640
+        if (idxs(a)==j)
+            xxx = [xxx; pts2(a)];
+        end
+    end
+    
+    num_clusters2=3;
+    idx2 = kmeans(xxx, num_clusters2);
+    for k = 1:num_clusters2
+        quiver3(X(idx2==k),Y(idx2==k),Z(idx2==k), Nx(idx2==k), Ny(idx2==k), Nz(idx2==k), 3, 'MarkerEdgeColor', rand(1,3))
+        hold on
+    end
 end
 view(-300,400)
 axis([-2 2 -1 1 -.6 .6])
