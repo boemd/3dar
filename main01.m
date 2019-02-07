@@ -166,14 +166,12 @@ idxs = reshape(idxs, 480, 640, []);
 figure(3)
 
 for j=1:num_clusters
-    pts2 = reshape(pts2, [], 4);
-    xxx=[];
-    for a=1:480*640
-        if (idxs(a)==j)
-            xxx = [xxx; pts2(a)];
-        end
-    end
-    
+    %pts2 = reshape(pts2, [], 4);
+    [t_r, t_c] = find(idxs==j);
+    xxx=zeros(length(t_r),4);
+    for l=1:length(t_r)
+        xxx(l,:) = pts2(t_r(l), t_c(l),:);
+    end    
     num_clusters2=3;
     idx2 = kmeans(xxx, num_clusters2);
     for k = 1:num_clusters2
