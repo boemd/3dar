@@ -8,14 +8,14 @@ LABELED_DATASET_PATH = '..\data\dataset4\nyu_depth_v2_labeled.mat';
 
 load(LABELED_DATASET_PATH, 'rawDepthFilenames', 'rawRgbFilenames');
 
-%% Load a pair of frames and align them.
+%% Load a pair of frames 
 load(LABELED_DATASET_PATH, 'images');
 load(LABELED_DATASET_PATH, 'rawDepths');
 %%
-img_idx=99;
+img_idx=20;
 alpha = 0.0028;
-beta = 10;
-gamma = 10;
+beta = 6; %to arrange
+gamma = 10; %to arrange
 
 
 imgRgb =images(:, :, :, img_idx);
@@ -98,7 +98,7 @@ idx2 = find((abs(Dy)-t_DC)>=0);
 C2 = zeros(H, W);
 C2(idx2) = 1;
 
-C = C1 + C2;
+C = bitor(C1, C2);
 
 
 
@@ -131,11 +131,34 @@ for i = 1:H
         normals(i,j,:)=cross(vp_h,vp_v);
     end
 end
+%{
+
+quiver3(X,Y,Z, normals(:, :, 1),normals(:, :, 2),normals(:, :, 3), 30)
+hold on
+view(-300,400)
+axis([-2 2 -1 1 -.6 .6])
+hold off
+
+%}
 
 
+norm_cols = reshape(normals, [], 3);
+num_clusters = 40;
+idxs = kmeans(norm_cols, num_clusters);
+idxs = reshape(idxs, 480, 640, []);
 
+figure
+Nx=normals(:, :, 1);
+Ny=normals(:, :, 2);
+Nz=normals(:, :, 3);
 
-
+for j=1:num_clusters
+    quiver3(X(idxs==j),Y(idxs==j),Z(idxs==j), Nx(idxs==j), Ny(idxs==j), Nz(idxs==j), 3, 'MarkerEdgeColor', rand(1,3))
+    hold on
+end
+view(-300,400)
+axis([-2 2 -1 1 -.6 .6])
+hold off
 
 function s = Sii(Io, i, j, r, H, W)
     
