@@ -5,8 +5,8 @@ from os import scandir
 
 FLAGS = tf.flags.FLAGS
 
-tf.flags.DEFINE_string('input_dir', '../Dataset/_set', 'Input directory')
-tf.flags.DEFINE_string('output_file', 'data/tfrecords/test.tfrecords', 'Output tfrecords file')
+tf.flags.DEFINE_string('input_dir', '../Dataset/training_set', 'Input directory')
+tf.flags.DEFINE_string('output_file', 'data/tfrecords/training.tfrecords', 'Output tfrecords file')
 
 
 def data_reader(input_dir):
@@ -89,11 +89,11 @@ def data_writer(input_dir, output_file):
     writer.close()
 
 
-def bytes_feature(value):
+def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 
-def float_feature(value):
+def _float_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
 
@@ -106,12 +106,12 @@ def convert_to_example(image_A_path, image_A, image_B_path, image_B, homography_
     homography_name = homography_path.split('/')[-1]
 
     example = tf.train.Example(features=tf.train.Features(feature={
-        'image/image_A_name': bytes_feature(tf.compat.as_bytes(os.path.basename(image_A_name))),
-        'image/encoded_A_image': bytes_feature(image_A),
-        'image/image_B_name': bytes_feature(tf.compat.as_bytes(os.path.basename(image_B_name))),
-        'image/encoded_B_image': bytes_feature(image_B),
-        'homography/homography_name': bytes_feature(tf.compat.as_bytes(os.path.basename(homography_name))),
-        'homography/homography_list': float_feature(homography)
+        'image/image_A_name': _bytes_feature(tf.compat.as_bytes(os.path.basename(image_A_name))),
+        'image/encoded_A_image': _bytes_feature(image_A),
+        'image/image_B_name': _bytes_feature(tf.compat.as_bytes(os.path.basename(image_B_name))),
+        'image/encoded_B_image': _bytes_feature(image_B),
+        'homography/homography_name': _bytes_feature(tf.compat.as_bytes(os.path.basename(homography_name))),
+        'homography/homography_list': _float_feature(homography)
     }))
 
     return example
