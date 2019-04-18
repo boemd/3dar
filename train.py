@@ -3,16 +3,22 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import multiprocessing
-from tensorflow.python import keras
+from datetime import datetime
 import model
 
 FLAGS = tf.flags.FLAGS
 CORES = multiprocessing.cpu_count()
+
 tf.flags.DEFINE_string('tfrecords_train_path', 'data/tfrecords/test.tfrecords',
                        'path to the training set (.tfrecords)')
-tf.flags.DEFINE_integer('batch_size', 16, 'size of the batch, default: 16')
+tf.flags.DEFINE_string('tfrecords_validation_path', 'data/tfrecords/test.tfrecords',
+                       'path to the training set (.tfrecords)')
+tf.flags.DEFINE_integer('batch_size', 64, 'size of the batch, default: 54')
 tf.flags.DEFINE_integer('shuffle_buffer_size', 500100, 'size of the shuffle buffer, default 500100')
-tf.flags.DEFINE_integer('training_steps', 1, 'number of training iterations, default: 100')
+tf.flags.DEFINE_float('initial_learning_rate', 5e-3, 'initial learning rate, default: 0.005')
+tf.flags.DEFINE_float('sgd_momentum', 9e-1, 'learning rate momentum, default: 0.9')
+tf.flags.DEFINE_integer('training_epochs', 1, 'number of training iterations over the entire dataset, default: 12')
+
 
 
 def _parse_example(serialized_example):
@@ -36,8 +42,8 @@ def _parse_example(serialized_example):
     return stack, homography_list
 
 
-def get_dataset():
-    dataset = tf.data.TFRecordDataset(FLAGS.tfrecords_train_path)
+def get_dataset(tfrecords_path):
+    dataset = tf.data.TFRecordDataset(tfrecords_path)
     dataset = dataset.map(_parse_example, num_parallel_calls=CORES)
     dataset = dataset.shuffle(buffer_size=FLAGS.shuffle_buffer_size)
     dataset = dataset.batch(FLAGS.batch_size, drop_remainder=True)
@@ -45,6 +51,15 @@ def get_dataset():
     x, y = iterator.get_next()
     #_plot_batch(x)
     return x, y
+
+
+def get_dataset_iterator(tfrecords_path):
+    dataset = tf.data.TFRecordDataset(tfrecords_path)
+    dataset = dataset.map(_parse_example, num_parallel_calls=CORES)
+    dataset = dataset.shuffle(buffer_size=FLAGS.shuffle_buffer_size)
+    dataset = dataset.batch(FLAGS.batch_size, drop_remainder=True)
+    iterator = dataset.make_one_shot_iterator()
+    return iterator
 
 
 def _plot_batch(batch):
@@ -67,10 +82,18 @@ def _plot_batch(batch):
 
 
 def train():
-    x_batch, y_batch = get_dataset()
-    x_input = keras.layers.Input(tensor=x_batch)
-    net = model.HomographyNet.build_model()
-    return
+    model_name = 'model_' + datetime.now().strftime('%Y%m%d-%H%M') + '.h5'
+    iter_train = get_dataset_iterator(FLAGS.tfrecords_train_path)
+    iter_val = get_dataset_iterator(FLAGS.tfrecords_validation_path)
+    net = model.HomographyNet(name='h_net', batch_size=FLAGS.batch_size)
+    net.build_model()
+    net.train_model(base_lr=FLAGS.initial_learning_rate,
+                    momentum=FLAGS.sgd_momentum,
+                    epochs=FLAGS.training_epochs,
+                    train_data=iter_train,
+                    val_data=iter_val)
+    net.save_model(model_name)
+
 
 def main(unused_argv):
     train()
