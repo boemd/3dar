@@ -1,8 +1,10 @@
 <component name="ProjectDictionaryState">
   <dictionary name="boemd">
     <words>
+      <w>conv</w>
       <w>homographies</w>
       <w>homography</w>
+      <w>relu</w>
       <w>tfrecords</w>
     </words>
   </dictionary>

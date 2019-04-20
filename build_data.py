@@ -1,12 +1,13 @@
 import tensorflow as tf
 import os
 import scipy.io
+import numpy as np
 from os import scandir
 
 FLAGS = tf.flags.FLAGS
 
-tf.flags.DEFINE_string('input_dir', '../Dataset/training_set', 'Input directory')
-tf.flags.DEFINE_string('output_file', 'data/tfrecords/training.tfrecords', 'Output tfrecords file')
+tf.flags.DEFINE_string('input_dir', '../Dataset/db_train_set', 'Input directory')
+tf.flags.DEFINE_string('output_file', 'data/tfrecords/db_train.tfrecords', 'Output tfrecords file')
 
 
 def data_reader(input_dir):
