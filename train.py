@@ -15,6 +15,7 @@ tf.flags.DEFINE_string('tfrecords_validation_path', 'data/tfrecords/db_val.tfrec
                        'path to the validation set (.tfrecords)')
 tf.flags.DEFINE_string('tfrecords_test_path', 'data/tfrecords/db_test.tfrecords',
                        'path to the test set (.tfrecords)')
+tf.flags.DEFINE_string('loss_function', 'categorical_crossentropy', 'loss function of the model')
 tf.flags.DEFINE_integer('batch_size', 3, 'size of the batch, default: 54')
 tf.flags.DEFINE_integer('shuffle_buffer_size', 500100, 'size of the shuffle buffer, default 500100')
 tf.flags.DEFINE_float('initial_learning_rate', 5e-3, 'initial learning rate, default: 0.005')
@@ -109,7 +110,7 @@ def train():
     net.build_model()
 
     loss, mtr = net.train_model(base_lr=FLAGS.initial_learning_rate,
-                                loss = 'categorical_crossentropy',
+                                loss=FLAGS.loss_function,
                                 momentum=FLAGS.sgd_momentum,
                                 epochs=FLAGS.training_epochs,
                                 train_data=(x_train, y_train),
