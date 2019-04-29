@@ -25,10 +25,7 @@ class Generator:
         batch_x_train[:, :, :, 0] = np.array([imread(file_name_1) for file_name_1 in batch_x_1])
         batch_x_train[:, :, :, 1] = np.array([imread(file_name_2) for file_name_2 in batch_x_2])
         batch_y_train = np.zeros((len(batch_y), 8))
-
         for i in range(len(batch_y)):
-
-            batch_y_train[i, :] = sio.loadmat(self.labels[i])['out'].T
-
+             batch_y_train[i, :] = sio.loadmat(self.labels[i])['out'].T
         return batch_x_train, batch_y_train
 
