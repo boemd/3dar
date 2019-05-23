@@ -1,28 +1,30 @@
 import tensorflow as tf
+from keras import callbacks, optimizers
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import multiprocessing
 from datetime import datetime
-import model
+import generate_model
 
 FLAGS = tf.flags.FLAGS
 CORES = multiprocessing.cpu_count()
 
-tf.flags.DEFINE_string('tfrecords_train_path', 'data/tfrecords/db_train.tfrecords',
+tf.flags.DEFINE_string('tfrecords_train_path', 'data/tfrecords/db_train_prova.tfrecords',
                        'path to the training set (.tfrecords)')
-tf.flags.DEFINE_string('tfrecords_validation_path', 'data/tfrecords/db_val.tfrecords',
-                       'path to the validation set (.tfrecords)')
-tf.flags.DEFINE_string('tfrecords_test_path', 'data/tfrecords/db_test.tfrecords',
+tf.flags.DEFINE_string('tfrecords_test_path', 'data/tfrecords/db_test_prova.tfrecords',
                        'path to the test set (.tfrecords)')
-tf.flags.DEFINE_string('loss_function', 'categorical_crossentropy', 'loss function of the model')
-tf.flags.DEFINE_integer('batch_size', 3, 'size of the batch, default: 54')
+tf.flags.DEFINE_string('tfrecords_validation_path', 'data/tfrecords/db_val_prova.tfrecords',
+                       'path to the validation set (.tfrecords)')
+tf.flags.DEFINE_string('loss_function', 'mean_squared_logarithmic_error', 'loss function of the model')
+tf.flags.DEFINE_integer('batch_size', 32, 'size of the batch, default: 54')
 tf.flags.DEFINE_integer('shuffle_buffer_size', 500100, 'size of the shuffle buffer, default 500100')
 tf.flags.DEFINE_float('initial_learning_rate', 5e-3, 'initial learning rate, default: 0.005')
 tf.flags.DEFINE_float('sgd_momentum', 9e-1, 'learning rate momentum, default: 0.9')
-tf.flags.DEFINE_integer('training_epochs', 1, 'number of training iterations over the entire dataset, default: 12')
-tf.flags.DEFINE_integer('val_steps', 2,
-                        'specifies how many training epochs to run before a new validation run is performed, default: 2')
+tf.flags.DEFINE_integer('training_epochs', None, 'number of training iterations over the entire dataset, default: 12')
+tf.flags.DEFINE_float('validation_split', 0.2, 'part of the dataset used for validation')
+tf.flags.DEFINE_integer('val_steps', None,
+                        'specifies how many training epochs run before a new validation run is performed, default: 2')
 
 
 def _parse_example(serialized_example):
@@ -98,33 +100,44 @@ def _plot_batch(batch):
     sess.close()
 
 
-def train():
+def _lr_callback(epochs, lr):
+    updated_lr = lr
+    #il primo epochs è 0 che ha resto 0
+    if ((epochs+1) % 2) == 0:
+        updated_lr /= 10
+    return updated_lr
+
+
+def train(epochs, batch_size):
     model_name = 'model_' + datetime.now().strftime('%Y%m%d-%H%M') + '.h5'
 
     x_train, y_train, sz_train = get_dataset(FLAGS.tfrecords_train_path)
-    x_val, y_val, sz_val = get_dataset(FLAGS.tfrecords_validation_path)
     x_test, y_test, sz_test = get_dataset(FLAGS.tfrecords_test_path)
+    x_val, y_val, sz_val = get_dataset(FLAGS.tfrecords_validation_path)
 
-    batch_size = FLAGS.batch_size
-    net = model.HomographyNet(name='h_net', batch_size=batch_size)
-    net.build_model()
+    lr = 0.005
+    momentum = 0.9
+    callback_learning_rate = callbacks.LearningRateScheduler(_lr_callback)
+    callbacks_early_stopping = callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1,
+                                                       mode='min', baseline=None, restore_best_weights=False)
 
-    loss, mtr = net.train_model(base_lr=FLAGS.initial_learning_rate,
-                                loss=FLAGS.loss_function,
-                                momentum=FLAGS.sgd_momentum,
-                                epochs=FLAGS.training_epochs,
-                                train_data=(x_train, y_train),
-                                val_data=(x_val, y_val),
-                                test_data=(x_test, y_test),
-                                steps_per_epoch=int(sz_train / batch_size),
-                                val_steps=FLAGS.val_steps)
-    net.save_model('models/'+model_name)
-    print('Test loss:', loss)
-    print('Test msle', mtr)
+    net = generate_model.build_model(batch_size)
+    sgd = optimizers.SGD(lr=lr, momentum=momentum, decay=0.0, nesterov=False)
+    net.compile(optimizer=sgd, loss="msle", metrics=["mse"], loss_weights=None,
+                sample_weight_mode=None, weighted_metrics=None, target_tensors=None)
+    net.fit_generator(generator=get_dataset(FLAGS.tfrecords_train_path),
+                      epochs=epochs,
+                      verbose=1,
+                      callbacks=[callbacks_early_stopping, callback_learning_rate],
+                      validation_data=get_dataset(FLAGS.tfrecords_validation_path),
+                      steps_per_epoch=int(sz_train / batch_size))
+
+    [loss, mtr] = net.evaluate(x=x_test, y=y_test, batch_size=batch_size, verbose=1, sample_weight=None, steps=None, )
+    print(loss, mtr)
 
 
 def main(unused_argv):
-    train()
+    train(10, 32)
 
 
 if __name__ == '__main__':

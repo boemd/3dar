@@ -1,15 +1,24 @@
 from keras.models import Sequential
 from keras.layers import InputLayer, Dense, Conv2D, BatchNormalization, Activation, MaxPooling2D, Flatten, Dropout
-import numpy as np
-import keras
+from keras import optimizers, callbacks
 
 
-class HomographyNet:
+def lr_callback(epochs, lr):
+    updated_lr = lr
+    # il primo epochs è 0 che ha resto 0
+    if ((epochs + 1) % 2) == 0:
+        updated_lr /= 10
+    return updated_lr
 
-    def __init__(self, name, batch_size):
-        self.name = name
-        self.model = None
+
+class HomographyNN:
+
+    def __init__(self, batch_size, epochs):
         self.batch_size = batch_size
+        self.epochs = epochs
+        self.model = None
+        self.optimizer = None
+        self.cb = None
 
     def build_model(self):
         """
@@ -71,7 +80,7 @@ class HomographyNet:
 
         model1.add(Dense(1024, name='dense_1'))
         model1.add(Activation('relu', name='relu_9'))
-        #model1.add(BatchNormalization())
+        # model1.add(BatchNormalization())
 
         model1.add(Dropout(0.5))
 
@@ -79,37 +88,10 @@ class HomographyNet:
 
         model1.summary()
         self.model = model1
+        return
 
-    def train_model(self, loss, base_lr, momentum, train_data, val_data=None, epochs=1, steps_per_epoch=500, val_steps=5, test_data=None):
-        """
-        Compiles and trains the model according to the given parameters.
-        Optimizer: Stochastic Gradient Descent on MSE loss
-        :return: loss and accuracy on test set
-        """
-        sgd = keras.optimizers.SGD(lr=base_lr, momentum=momentum)
-        self.model.compile(loss=loss, optimizer=sgd, metrics=['msle'])
-
-        def _lr_callback(epoch, lr):
-            updated_lr = lr
-            if (epoch % 2) == 0:
-                updated_lr /= 10
-            return updated_lr
-
-        callback_learning_rate = keras.callbacks.LearningRateScheduler(_lr_callback)
-        callback_early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
-        callbacks = [callback_learning_rate, callback_early_stopping]
-
-        self.model.fit(x=keras.Input(tensor=train_data[0]),
-                       y=keras.Input(tensor=train_data[1]),
-                       epochs=epochs,
-                       steps_per_epoch=steps_per_epoch,
-                       verbose=1,
-                       callbacks=callbacks,
-                       validation_data=val_data,
-                       validation_steps=val_steps)
-
-        [loss, mtr] = self.model.evaluate(x=test_data[0], y=test_data[1], steps=5, verbose=1)
-        return loss, mtr
+    def get_model(self):
+        return self.model
 
     def save_model(self, weights_file):
         """
@@ -117,6 +99,7 @@ class HomographyNet:
         :param weights_file: name of the file in which to save the weights of the model
         """
         self.model.save_weights(weights_file)
+        return
 
     def load_model(self, weights_path):
         """
@@ -124,17 +107,41 @@ class HomographyNet:
         :param weights_path: path of the file containing the weights
         """
         self.model.load_weights(weights_path)
+        return
 
+    def set_optimizer_sgd(self, lr, momentum):
+        sgd = optimizers.SGD(lr=lr, momentum=momentum, decay=0.0, nesterov=False)
+        self.optimizer = sgd
+        return
 
+    def set_callback(self, function):
+        callback_learning_rate = callbacks.LearningRateScheduler(function)
+        callbacks_early_stopping = callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1,
+                                                           mode='min', baseline=None, restore_best_weights=False)
+        self.cb = [callback_learning_rate, callbacks_early_stopping]
+        return
 
+    def fit(self, training_generator, dimension_train, val_generator, dimension_val):
+        self.model.fit_generator(generator=training_generator,
+                                 steps_per_epoch=(dimension_train // self.batch_size),
+                                 epochs=self.epochs,
+                                 verbose=1,
+                                 callbacks=self.cb,
+                                 validation_data=val_generator,
+                                 validation_steps=dimension_val//self.batch_size,
+                                 class_weight=None,
+                                 max_queue_size=10,
+                                 workers=1,
+                                 use_multiprocessing=True,
+                                 shuffle=True,
+                                 initial_epoch=0)
+        return
 
+    def test(self, test_generator, dimension_test):
+        return self.model.evaluate_generator(generator=test_generator, steps=dimension_test//self.batch_size,
+                                             max_queue_size=10, workers=1, use_multiprocessing=True, verbose=1)
 
-
-
-
-
-
-
-
-
-
+    def compile(self,):
+        self.model.compile(optimizer=self.optimizer, loss="msle", metrics=["mse"], loss_weights=None,
+                           sample_weight_mode=None, weighted_metrics=None, target_tensors=None)
+        return

@@ -15,7 +15,7 @@ class Generator:
         return self
 
     def __len__(self):
-        yield np.ceil(len(self.image_filenames_1) / float(self.batch_size))
+        return np.int(np.ceil(len(self.image_filenames_1) / float(self.batch_size)))
 
     def __next__(self):
         batch_x_1 = self.image_filenames_1[self.idx * self.batch_size:(self.idx + 1) * self.batch_size]
