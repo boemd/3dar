@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
 
 
-    #datagen = ImageDataGenerator()
+    #datagen = ImageDataGenerator() 6
     # # load and iterate training dataset
     # train_it = datagen.flow_from_directory(FLAGS.input_dir, class_mode=None, batch_size=64)
     # # load and iterate validation dataset

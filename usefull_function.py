@@ -17,7 +17,7 @@ def data_reader(input_dir):
     """
     scans the input folder and organizes the various paths
     :param input_dir: directory containing images (.png) of type A and B and their respective homography matrices (.mat)
-    :return: lists of paths of images (types A and B) and homography matrices
+    :return: lists of paths of images (types A and B) and homography matrices values
     """
     images_A_paths = []
     images_B_paths = []

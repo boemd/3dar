@@ -182,7 +182,7 @@ class HomographyNN:
 
     def generate_Homography_NN(self, lr, momentum):
         """
-        generate a complete homography nn model
+        generate a complete homography neural network model
         :param lr: value of the learning rate for the SGD
         :param momentum: momentum for the SGD
         """
