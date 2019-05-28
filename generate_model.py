@@ -1,14 +1,7 @@
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import InputLayer, Dense, Conv2D, BatchNormalization, Activation, MaxPooling2D, Flatten, Dropout
 from keras import optimizers, callbacks
-
-
-def lr_callback(epochs, lr):
-    updated_lr = lr
-    # il primo epochs è 0 che ha resto 0
-    if ((epochs + 1) % 2) == 0:
-        updated_lr /= 10
-    return updated_lr
+import usefull_function
 
 
 class HomographyNN:
@@ -91,37 +84,70 @@ class HomographyNN:
         return
 
     def get_model(self):
+        """
+        return the keras model
+        :return: keras model file
+        """
         return self.model
 
-    def save_model(self, weights_file):
+    def save_all(self, file):
         """
         Saves the model in a .h5 file
-        :param weights_file: name of the file in which to save the weights of the model
+        :param file: name of the file in which to save the model
         """
-        self.model.save_weights(weights_file)
+        self.model.save_weights(file + "_weights.h5")
+        self.model.save(file + "_model.h5")
         return
 
-    def load_model(self, weights_path):
+    def load_weights(self, file):
         """
         Loads the saved weights in the model
-        :param weights_path: path of the file containing the weights
+        :param file: path of the file containing the weights
         """
-        self.model.load_weights(weights_path)
+        self.model.load_weights(file + "_weights.h5")
         return
+
+    def load_all(self, file):
+        """
+        Load all the parameter of the NN
+        :param file: name of the element
+        """
+        self.model = load_model(file + "_model.h5")
 
     def set_optimizer_sgd(self, lr, momentum):
+        """
+        Set the optimizer for the NN
+        :param lr: the value of the learning rate
+        :param momentum: set the momentum value
+        """
         sgd = optimizers.SGD(lr=lr, momentum=momentum, decay=0.0, nesterov=False)
         self.optimizer = sgd
-        return
 
     def set_callback(self, function):
+        """
+        Set the callbacks value for the NN
+        :param function: the function for the learning rate scheduler
+        """
         callback_learning_rate = callbacks.LearningRateScheduler(function)
         callbacks_early_stopping = callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1,
                                                            mode='min', baseline=None, restore_best_weights=False)
         self.cb = [callback_learning_rate, callbacks_early_stopping]
-        return
+
+    def compile(self):
+        """
+        compile the model
+        """
+        self.model.compile(optimizer=self.optimizer, loss="msle", metrics=["mse"], loss_weights=None,
+                           sample_weight_mode=None, weighted_metrics=None, target_tensors=None)
 
     def fit(self, training_generator, dimension_train, val_generator, dimension_val):
+        """
+        Fit the precedent created model
+        :param training_generator: the generetor of sample for the training
+        :param dimension_train: the dimension of the training set
+        :param val_generator: the generetor of sample for the test
+        :param dimension_val: the dimension of the validation set
+        """
         self.model.fit_generator(generator=training_generator,
                                  steps_per_epoch=(dimension_train // self.batch_size),
                                  epochs=self.epochs,
@@ -135,13 +161,34 @@ class HomographyNN:
                                  use_multiprocessing=True,
                                  shuffle=True,
                                  initial_epoch=0)
-        return
+
+    def prediction(self, x):
+        """
+        Predict the value from a new samples
+        :param x: new samples to pass at the NN
+        :return: the predicted values
+        """
+        return self.model.predict(x, batch_size=self.batch_size, verbose=0, steps=len(x)//self.batch_size)
 
     def test(self, test_generator, dimension_test):
+        """
+        Find the error for the prediction on the test set
+        :param test_generator: the generetor of sample for the test
+        :param dimension_test: the dimension of the test set
+        :return: the msle and the mse for the test set
+        """
         return self.model.evaluate_generator(generator=test_generator, steps=dimension_test//self.batch_size,
                                              max_queue_size=10, workers=1, use_multiprocessing=True, verbose=1)
 
-    def compile(self,):
-        self.model.compile(optimizer=self.optimizer, loss="msle", metrics=["mse"], loss_weights=None,
-                           sample_weight_mode=None, weighted_metrics=None, target_tensors=None)
-        return
+    def generate_Homography_NN(self, lr, momentum):
+        """
+        generate a complete homography nn model
+        :param lr: value of the learning rate for the SGD
+        :param momentum: momentum for the SGD
+        """
+        # Create the NN
+        self.set_optimizer_sgd(lr=lr, momentum=momentum)
+        self.set_callback(usefull_function.lr_callback)
+        self.build_model()
+        self.compile()
+
