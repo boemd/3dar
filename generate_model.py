@@ -131,7 +131,7 @@ class HomographyNN:
         """
         self.model = load_model(file + "_model.h5")
 
-    def set_optimizer_sgd(self,):
+    def set_optimizer_sgd(self):
         """
         Set the optimizer for the NN
         :param lr: the value of the learning rate
@@ -197,7 +197,7 @@ class HomographyNN:
         return self.model.predict_generator(generator, steps=dimension_generator//self.batch_size, max_queue_size=10, workers=1,
                                             use_multiprocessing=True, verbose=0)
 
-    def test(self, test_generator, dimension_test):
+    def test_generator(self, test_generator, dimension_test):
         """
         Find the error for the prediction on the test set
         :param test_generator: the generetor of sample for the test
