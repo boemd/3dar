@@ -6,12 +6,22 @@ import usefull_function
 
 class HomographyNN:
 
-    def __init__(self, batch_size, epochs):
+    def __init__(self, batch_size, epochs, learning_rate, momentum):
+        """
+        Set all the parameters of the neural network
+        :param batch_size: Dimension of the batch for every epochs
+        :param epochs: Number of epochs until the stop
+        :param learning_rate: value of the learning rate for the SGD
+        :param momentum: momentum for the SGD
+
+        """
         self.batch_size = batch_size
         self.epochs = epochs
         self.model = None
         self.optimizer = None
         self.cb = None
+        self.lr = learning_rate
+        self.momentum = momentum
 
     def build_model(self):
         """
@@ -95,8 +105,15 @@ class HomographyNN:
         Saves the model in a .h5 file
         :param file: name of the file in which to save the model
         """
-        self.model.save_weights(file + "_weights.h5")
         self.model.save(file + "_model.h5")
+        return
+
+    def save_weights(self, file):
+        """
+        Saves the weights in a .h5 file
+        :param file: name of the file in which to save the model
+        """
+        self.model.save_weights(file + "_weights.h5")
         return
 
     def load_weights(self, file):
@@ -114,13 +131,13 @@ class HomographyNN:
         """
         self.model = load_model(file + "_model.h5")
 
-    def set_optimizer_sgd(self, lr, momentum):
+    def set_optimizer_sgd(self,):
         """
         Set the optimizer for the NN
         :param lr: the value of the learning rate
         :param momentum: set the momentum value
         """
-        sgd = optimizers.SGD(lr=lr, momentum=momentum, decay=0.0, nesterov=False)
+        sgd = optimizers.SGD(lr=self.lr, momentum=self.momentum, decay=0.0, nesterov=False)
         self.optimizer = sgd
 
     def set_callback(self, function):
@@ -170,6 +187,16 @@ class HomographyNN:
         """
         return self.model.predict(x, batch_size=self.batch_size, verbose=0, steps=len(x)//self.batch_size)
 
+    def prediction_generator(self, generator, dimension_generator):
+        """
+        Prediction of a list of files
+        :param generator:
+        :param dimension_generator:
+        :return:
+        """
+        return self.model.predict_generator(generator, steps=dimension_generator//self.batch_size, max_queue_size=10, workers=1,
+                                            use_multiprocessing=True, verbose=0)
+
     def test(self, test_generator, dimension_test):
         """
         Find the error for the prediction on the test set
@@ -180,14 +207,12 @@ class HomographyNN:
         return self.model.evaluate_generator(generator=test_generator, steps=dimension_test//self.batch_size,
                                              max_queue_size=10, workers=1, use_multiprocessing=True, verbose=1)
 
-    def generate_Homography_NN(self, lr, momentum):
+    def generate_homography_nn(self):
         """
         generate a complete homography neural network model
-        :param lr: value of the learning rate for the SGD
-        :param momentum: momentum for the SGD
         """
         # Create the NN
-        self.set_optimizer_sgd(lr=lr, momentum=momentum)
+        self.set_optimizer_sgd()
         self.set_callback(usefull_function.lr_callback)
         self.build_model()
         self.compile()
