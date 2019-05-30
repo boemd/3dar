@@ -1,7 +1,8 @@
 import sklearn.metrics as sk_metrics
 import numpy as np
 from os import scandir
-import MY_Generator
+import generator
+
 
 def mse(true, predicted):
     return sk_metrics.mean_squared_error(true.T, predicted.T, multioutput='raw_values')
@@ -66,7 +67,7 @@ def create_generator(directory, batch_size):
     :return:
     """
     a, b, mat = data_reader(directory)
-    my_batch_generator = MY_Generator.Generator(a, b, mat, batch_size)
+    my_batch_generator = generator.Generator(a, b, mat, batch_size)
     num_samples = len(a)
     return my_batch_generator, num_samples
 
