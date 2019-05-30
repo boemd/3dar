@@ -1,12 +1,12 @@
 from keras.models import Sequential, load_model
 from keras.layers import InputLayer, Dense, Conv2D, BatchNormalization, Activation, MaxPooling2D, Flatten, Dropout
 from keras import optimizers, callbacks
-import usefull_function
+import utils
 
 
 class HomographyNN:
 
-    def __init__(self, batch_size, epochs, learning_rate, momentum):
+    def __init__(self, batch_size=1, epochs=None, learning_rate=None, momentum=None):
         """
         Set all the parameters of the neural network
         :param batch_size: Dimension of the batch for every epochs
@@ -179,15 +179,15 @@ class HomographyNN:
                                  shuffle=True,
                                  initial_epoch=0)
 
-    def prediction(self, x):
+    def predict(self, x):
         """
         Predict the value from a new samples
         :param x: new samples to pass at the NN
         :return: the predicted values
         """
-        return self.model.predict(x, batch_size=self.batch_size, verbose=0, steps=len(x)//self.batch_size)
+        return self.model.predict(x, batch_size=1, verbose=0)
 
-    def prediction_generator(self, generator, dimension_generator):
+    def predict_generator(self, generator, dimension_generator):
         """
         Prediction of a list of files
         :param generator:

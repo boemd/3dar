@@ -2,11 +2,11 @@ import cv2
 import scipy.io
 import numpy as np
 
-name_in = 'prova/input.png'
-name_out = 'prova/output.png'
-name_sq1 = 'prova/train_000002A.png'
-name_sq2 = 'prova/train_000002B.png'
-name_h = 'prova/train_000002.mat'
+name_in = '../ppp.jpg'
+name_out = '../pppout.jpg'
+name_sq1 = '../pppA.png'
+name_sq2 = '../pppB.png'
+name_h = '../ppp.mat'
 
 img_in = cv2.imread(name_in, cv2.IMREAD_GRAYSCALE)
 img_out = cv2.imread(name_out, cv2.IMREAD_GRAYSCALE)
@@ -16,7 +16,7 @@ sq2 = cv2.imread(name_sq2, cv2.IMREAD_GRAYSCALE)
 
 mat = scipy.io.loadmat(name_h)['out']
 h = np.append(mat, 1)
-h = np.reshape(h, [3, 3])
+h = np.transpose(np.reshape(h, [3, 3]))
 h = np.linalg.inv(h)
 
 pt0 = np.array([5, 5, 1]).transpose()
@@ -56,7 +56,7 @@ search_params = dict(checks=50)
 
 flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-matches = flann.knnMatch(des1,des2,k=2)
+matches = flann.knnMatch(des1, des2, k=2)
 
 # store all the good matches as per Lowe's ratio test.
 good = []
@@ -81,11 +81,11 @@ pp1 = cv2.polylines(img_out, [pts1], True, (0, 255, 255))
 mse = np.sum((np.linalg.inv(h)-M)**2)
 print(mse)
 
-'''
+
 cv2.imshow('image', pp1)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-'''
+
 
 
 

@@ -1,7 +1,7 @@
 from keras.models import Sequential
 from keras.layers import InputLayer, Dense, Conv2D, BatchNormalization, Activation, MaxPooling2D, Flatten, Dropout
 import matplotlib.image as img
-import MY_Generator
+import generator
 import glob
 
 import numpy as np
@@ -32,7 +32,7 @@ def build_model():
     :return: the built model
     """
     model1 = Sequential()
-    model1.add(InputLayer(input_shape=(128, 128,1), name='input_layer'))
+    model1.add(InputLayer(input_shape=(128, 128, 1), name='input_layer'))
 
     model1.add(Conv2D(64, 3, name='conv_64_1'))
     model1.add(BatchNormalization(name='batch_norm_1'))

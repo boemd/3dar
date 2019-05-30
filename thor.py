@@ -2,6 +2,7 @@ import cv2
 import scipy.io
 import numpy as np
 import copy
+from model import HomographyNN
 
 
 class Thor:
@@ -21,6 +22,7 @@ class Thor:
         h = np.reshape(h, [3, 3])
         self.h_ab = np.linalg.inv(h)
         self.h_est = None
+        self.h_homo = None
 
     def cv_homography_estimate(self):
         sift = cv2.xfeatures2d.SIFT_create()
@@ -48,6 +50,22 @@ class Thor:
             h_ab, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
         self.h_est = h_ab
         return h_ab
+
+    def cnn_homography_estimate(self, weights_path):
+        net = HomographyNN()
+        net.build_model()
+        net.load_weights(weights_path)
+
+        height, width = self.patch_a.shape
+
+        input = np.zeros([1, height, width, 2])
+        input[:, :, :, 0] = self.patch_a
+        input[:, :, :, 1] = self.patch_b
+
+        h = net.predict(input)
+        h = np.append(h, 1)
+        h = np.reshape(h, [3, 3])
+        self.h_homo = np.linalg.inv(h)
 
     def project(self, h, sz=30, color=(0, 255, 0)):
         pt0 = np.array([5, 5, 1]).transpose()
@@ -82,7 +100,7 @@ class Thor:
 
         pts1 = np.array([pt01, pt11, pt21, pt31], np.int32)
         pts1 = pts1.reshape((-1, 1, 2))
-        out_b = cv2.polylines(cv2.cvtColor(out_a, cv2.COLOR_GRAY2BGR), [pts1], True, color)
+        out_b = cv2.polylines(cv2.cvtColor(self.img_b, cv2.COLOR_GRAY2BGR), [pts1], True, color)
 
         return out_a, out_b
 

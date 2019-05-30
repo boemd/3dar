@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import multiprocessing
 from datetime import datetime
-import generate_model
+import model
 
 FLAGS = tf.flags.FLAGS
 CORES = multiprocessing.cpu_count()
@@ -121,7 +121,7 @@ def train(epochs, batch_size):
     callbacks_early_stopping = callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1,
                                                        mode='min', baseline=None, restore_best_weights=False)
 
-    net = generate_model.build_model(batch_size)
+    net = model.build_model(batch_size)
     sgd = optimizers.SGD(lr=lr, momentum=momentum, decay=0.0, nesterov=False)
     net.compile(optimizer=sgd, loss="msle", metrics=["mse"], loss_weights=None,
                 sample_weight_mode=None, weighted_metrics=None, target_tensors=None)

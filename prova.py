@@ -1,8 +1,8 @@
 
-import MY_Generator
+import generator
 import tensorflow as tf
-from usefull_function import create_generator
-import generate_model
+from utils import create_generator
+import model
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_string('input_dir', 'C:/Users/gabro/Documents/3D/Dataset/db_train_set', 'Input directory')
@@ -17,7 +17,7 @@ def learning(batch_size, epochs, lr, momentum):
     my_val_batch_generator, num_validation_samples = create_generator(FLAGS.val_dir, batch_size)
     my_test_batch_generator, num_test_samples = create_generator(FLAGS.test_dir, batch_size)
 
-    hnn = generate_model.HomographyNN(batch_size=batch_size, epochs=epochs, learning_rate=lr, momentum=momentum)
+    hnn = model.HomographyNN(batch_size=batch_size, epochs=epochs, learning_rate=lr, momentum=momentum)
     hnn.generate_homography_nn()
     hnn.load_weights("batch128")
 
