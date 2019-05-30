@@ -5,9 +5,9 @@ from utils import create_generator
 import model
 FLAGS = tf.flags.FLAGS
 
-tf.flags.DEFINE_string('input_dir', 'C:/Users/gabro/Documents/3D/Dataset/db_train_set', 'Input directory')
-tf.flags.DEFINE_string('test_dir', 'C:/Users/gabro/Documents/3D/Dataset/db_test_set', 'Test directory')
-tf.flags.DEFINE_string('val_dir', 'C:/Users/gabro/Documents/3D/Dataset/db_val_set', 'Validation directory')
+tf.flags.DEFINE_string('input_dir', 'C:/Users/gabro/Documents/3D/ms-coco/train', 'Input directory')
+tf.flags.DEFINE_string('test_dir', 'C:/Users/gabro/Documents/3D/ms-coco/test', 'Test directory')
+tf.flags.DEFINE_string('val_dir', 'C:/Users/gabro/Documents/3D/ms-coco/val', 'Validation directory')
 
 
 def learning(batch_size, epochs, lr, momentum):
@@ -19,19 +19,20 @@ def learning(batch_size, epochs, lr, momentum):
 
     hnn = model.HomographyNN(batch_size=batch_size, epochs=epochs, learning_rate=lr, momentum=momentum)
     hnn.generate_homography_nn()
-    hnn.load_weights("batch128")
+    hnn.fit(training_generator=my_training_batch_generator, dimension_train=num_training_samples,
+            val_generator=my_val_batch_generator, dimension_val=num_validation_samples)
+    hnn.save_weights("64batch")
 
     # Test the model
-    a = hnn.prediction_generator(generator=my_test_batch_generator, dimension_generator=num_test_samples)
-    return a
+    [loss, accuracy] = hnn.test_generator(test_generator=my_test_batch_generator, dimension_test=num_test_samples)
+    return accuracy
 
 
 if __name__ == '__main__':
     lr = 0.005
     momentum = 0.9
-    a = learning(128, 1, lr, momentum)
+    a = learning(32, 8, lr, momentum)
     print(a)
-    print(a.shape)
 
 
 

@@ -44,8 +44,8 @@ def data_reader(input_dir):
         a = images_A_paths[i].split('\\')[-1].split('A')[0]
         b = images_B_paths[i].split('\\')[-1].split('B')[0]
         c = homographies_paths[i].split('\\')[-1].split('.')[0]
-        if a != b or b != c or c != a:
-            raise Exception('Paths not corresponding. Not corresponding files.')
+       # if a != b or b != c or c != a:
+       #     raise Exception('Paths not corresponding. Not corresponding files.')
 
     # everything is matched
     return images_A_paths, images_B_paths, homographies_paths
@@ -54,7 +54,7 @@ def data_reader(input_dir):
 def lr_callback(epochs, lr):
     updated_lr = lr
     # il primo epochs è 0 che ha resto 0
-    if ((epochs+1) % 2) == 0:
+    if ((epochs+1) % 3) == 0:
         updated_lr /= 10
     return updated_lr
 
