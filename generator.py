@@ -29,5 +29,7 @@ class Generator:
 
              batch_y_train[i, :] = sio.loadmat(self.labels[i])['out'].T
 
+        batch_x_train = np.divide(batch_x_train, 255)
+        batch_y_train = np.divide(batch_y_train, 10)
         return batch_x_train, batch_y_train
 

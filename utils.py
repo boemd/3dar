@@ -54,7 +54,7 @@ def data_reader(input_dir):
 def lr_callback(epochs, lr):
     updated_lr = lr
     # il primo epochs è 0 che ha resto 0
-    if ((epochs+1) % 3) == 0:
+    if ((epochs+1) % 6) == 0:
         updated_lr /= 10
     return updated_lr
 

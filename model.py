@@ -140,6 +140,11 @@ class HomographyNN:
         sgd = optimizers.SGD(lr=self.lr, momentum=self.momentum, decay=0.0, nesterov=False)
         self.optimizer = sgd
 
+
+    def set_optimizer_adam(self):
+        adam = optimizers.adam(lr=self.lr)
+        self.optimizer = adam
+
     def set_callback(self, function):
         """
         Set the callbacks value for the NN
@@ -154,7 +159,7 @@ class HomographyNN:
         """
         compile the model
         """
-        self.model.compile(optimizer=self.optimizer, loss="msle", metrics=["mse"], loss_weights=None,
+        self.model.compile(optimizer=self.optimizer, loss="mse", metrics=["msle"], loss_weights=None,
                            sample_weight_mode=None, weighted_metrics=None, target_tensors=None)
 
     def fit(self, training_generator, dimension_train, val_generator, dimension_val):
@@ -207,13 +212,23 @@ class HomographyNN:
         return self.model.evaluate_generator(generator=test_generator, steps=dimension_test//self.batch_size,
                                              max_queue_size=10, workers=1, use_multiprocessing=True, verbose=1)
 
-    def generate_homography_nn(self):
+    def generate_homography_nn_sgd(self):
         """
         generate a complete homography neural network model
         """
         # Create the NN
         self.set_optimizer_sgd()
-        self.set_callback(usefull_function.lr_callback)
+        self.set_callback(utils.lr_callback)
+        self.build_model()
+        self.compile()
+
+    def generate_homography_nn_adam(self):
+        """
+        generate a complete homography neural network model
+        """
+        # Create the NN
+        self.set_optimizer_adam()
+        self.set_callback(utils.lr_callback)
         self.build_model()
         self.compile()
 
