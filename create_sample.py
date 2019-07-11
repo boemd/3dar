@@ -36,26 +36,30 @@ if __name__ == '__main__':
         num = np.random.randint(1, 287000)
         img = cv2.imread(directory[num], cv2.IMREAD_GRAYSCALE)
         # Find the dimension
-        w, h = img.shape
+        img = cv2.resize(img, (480, 480))
 
         # Find the positions of the points
         points, modified_points = generate_points()
 
         # Extract the first square
         i_1 = img[points[0, 0]:points[0, 0]+128, points[0, 1]:points[0, 1]+128]
-        cv2.imwrite("D:/Downloads/val_set/"+str(j)+"_A.jpg", i_1)
+
 
         # Calculate the first homography
         homography, status = cv2.findHomography(points, modified_points)
-        homography_value = np.reshape(homography, (9,1))
-        sio.savemat("D:/Downloads/val_set/"+str(j)+"_M.jpg", mdict={"homography": homography_value[0:8]})
+        homography_value = np.reshape(homography, (9, 1))
+
 
         # Transform the first image
-        img_modify = cv2.warpPerspective(img, np.linalg.inv(homography), (w, h))
+        img_modify = cv2.warpPerspective(img, np.linalg.inv(homography), (480, 480))
 
         # Extract the second image
+        a = directory[num].split('\\')[-1].split('.jpg')[0]
         i_2 = img_modify[points[0, 0]:points[0, 0]+128, points[0, 1]:points[0, 1]+128]
-        cv2.imwrite("D:/Downloads/val_set/" + str(j) + "_B.jpg", i_2)
+        if i_2.shape == (128, 128):
+            cv2.imwrite("D:/Downloads/val_set/" + str(a) + '_' + str(j) + "_A.png", i_1)
+            cv2.imwrite("D:/Downloads/val_set/" + str(a) + '_' + str(j) + "_B.png", i_2)
+            sio.savemat("D:/Downloads/val_set/" + str(a) + '_' + str(j) + "_M.mat", mdict={"homography": homography_value[0:8]})
 
         if j % 10000 == 0:
             print(j)
