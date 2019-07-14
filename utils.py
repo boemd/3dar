@@ -1,7 +1,7 @@
 import sklearn.metrics as sk_metrics
 import numpy as np
+import seq_gen
 from os import scandir
-import generator
 
 
 def mse(true, predicted):
@@ -14,7 +14,7 @@ def mean_mse(true, predicted):
     return mean
 
 
-def data_reader(input_dir):
+def data_reader(input_dir, extA='A.png', extB='B.png', extL='M.mat'):
     """
     scans the input folder and organizes the various paths
     :param input_dir: directory containing images (.png) of type A and B and their respective homography matrices (.mat)
@@ -25,11 +25,11 @@ def data_reader(input_dir):
     homographies_paths = []
 
     for file in scandir(input_dir):
-        if file.name.endswith('A.png'):
+        if file.name.endswith(extA):
             images_A_paths.append(file.path)
-        elif file.name.endswith('B.png'):
+        elif file.name.endswith(extB):
             images_B_paths.append(file.path)
-        elif file.name.endswith('.mat'):
+        elif file.name.endswith(extL):
             homographies_paths.append(file.path)
 
     cond_1 = len(images_A_paths) != len(images_B_paths)
@@ -58,17 +58,31 @@ def lr_callback(epochs, lr):
         updated_lr /= 10
     return updated_lr
 
-
-def create_generator(directory, batch_size):
+'''
+def create_generator(directory, batch_size, extA='A.png', extB='B.png', extL='M.mat'):
     """
     Create generators
     :param directory: directory of the files
     :param batch_size: dimension of the batch
     :return:
     """
-    a, b, mat = data_reader(directory)
+    a, b, mat = data_reader(directory, extA, extB, extL)
     my_batch_generator = generator.Generator(a, b, mat, batch_size)
     num_samples = len(a)
     return my_batch_generator, num_samples
+'''
+
+def create_seq_generator(directory, batch_size, extA='A.png', extB='B.png', extL='M.mat'):
+    """
+    Create generators
+    :param directory: directory of the files
+    :param batch_size: dimension of the batch
+    :return:
+    """
+    a, b, mat = data_reader(directory, extA, extB, extL)
+    my_batch_generator = seq_gen.DataGenerator(a, b, mat, batch_size)
+    num_samples = my_batch_generator.__len__() * batch_size
+    return my_batch_generator, num_samples
+
 
 

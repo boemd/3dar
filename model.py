@@ -2,11 +2,12 @@ from keras.models import Sequential, load_model
 from keras.layers import InputLayer, Dense, Conv2D, BatchNormalization, Activation, MaxPooling2D, Flatten, Dropout
 from keras import optimizers, callbacks
 import utils
+import multiprocessing
 
 
 class HomographyNN:
 
-    def __init__(self, batch_size=1, epochs=None, learning_rate=None, momentum=None):
+    def __init__(self, batch_size=1, epochs=None, learning_rate=None, momentum=None, weights_name=''):
         """
         Set all the parameters of the neural network
         :param batch_size: Dimension of the batch for every epochs
@@ -22,6 +23,7 @@ class HomographyNN:
         self.cb = None
         self.lr = learning_rate
         self.momentum = momentum
+        self.weights_name = weights_name
 
     def build_model(self):
         """
@@ -79,13 +81,13 @@ class HomographyNN:
 
         model1.add(Flatten(name='flatten'))
 
-        model1.add(Dropout(0.5))
+        model1.add(Dropout(0.5, name='drop0'))
 
         model1.add(Dense(1024, name='dense_1'))
         model1.add(Activation('relu', name='relu_9'))
         # model1.add(BatchNormalization())
 
-        model1.add(Dropout(0.5))
+        model1.add(Dropout(0.5, name='drop1'))
 
         model1.add(Dense(8, name='dense_2'))
 
@@ -140,7 +142,6 @@ class HomographyNN:
         sgd = optimizers.SGD(lr=self.lr, momentum=self.momentum, decay=0.0, nesterov=False)
         self.optimizer = sgd
 
-
     def set_optimizer_adam(self):
         adam = optimizers.adam(lr=self.lr)
         self.optimizer = adam
@@ -151,15 +152,19 @@ class HomographyNN:
         :param function: the function for the learning rate scheduler
         """
         callback_learning_rate = callbacks.LearningRateScheduler(function)
-        callbacks_early_stopping = callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1,
+        callback_early_stopping = callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1,
                                                            mode='min', baseline=None, restore_best_weights=False)
-        self.cb = [callback_learning_rate, callbacks_early_stopping]
+        callback_checkpoint = callbacks.ModelCheckpoint(self.weights_name + '_weights{epoch:08d}.h5',
+                                                        save_weights_only=True, period=5)
+
+        self.cb = [callback_learning_rate, callback_early_stopping, callback_checkpoint]
+
 
     def compile(self):
         """
         compile the model
         """
-        self.model.compile(optimizer=self.optimizer, loss="mse", metrics=["msle"], loss_weights=None,
+        self.model.compile(optimizer=self.optimizer, loss="mse", metrics=None, loss_weights=None,
                            sample_weight_mode=None, weighted_metrics=None, target_tensors=None)
 
     def fit(self, training_generator, dimension_train, val_generator, dimension_val):
@@ -171,7 +176,7 @@ class HomographyNN:
         :param dimension_val: the dimension of the validation set
         """
         self.model.fit_generator(generator=training_generator,
-                                 steps_per_epoch=(dimension_train // self.batch_size),
+                                 steps_per_epoch=dimension_train // self.batch_size,
                                  epochs=self.epochs,
                                  verbose=1,
                                  callbacks=self.cb,
@@ -179,8 +184,8 @@ class HomographyNN:
                                  validation_steps=dimension_val//self.batch_size,
                                  class_weight=None,
                                  max_queue_size=10,
-                                 workers=1,
-                                 use_multiprocessing=True,
+                                 workers=multiprocessing.cpu_count(),
+                                 use_multiprocessing=False,
                                  shuffle=True,
                                  initial_epoch=0)
 
