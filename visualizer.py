@@ -2,19 +2,22 @@ from thor import Thor
 import numpy as np
 import cv2
 
-test_folder = '../test_data/test1/'
-img_a = test_folder + 'COCO_train2014_000000000009.jpg'
+# test_base = '../test_data/test1/COCO_train2014_000000000009'
+# test_base = '../test_data/test2/COCO_train2014_000000000025'
+# test_base = '../test_data/test3/COCO_train2014_000000000030'
+test_base = '../test_data/test4/COCO_train2014_000000000034'
+img_a = test_base + '.jpg'
 img_b = None
-patch_a = test_folder + 'COCO_train2014_000000000009_1_1.jpg'
-patch_b = test_folder + 'COCO_train2014_000000000009_1_2.jpg'
-perts = test_folder + 'COCO_train2014_000000000009_1_re.txt'
-pert_corners = test_folder + 'COCO_train2014_000000000009_1_ab.txt'
-model_weights = 're_12ep_msle'
+patch_a = test_base + '_1_1.jpg'
+patch_b = test_base + '_1_2.jpg'
+perts = test_base + '_1_re.txt'
+pert_corners = test_base + '_1_ab.txt'
+model_weights = 'weights/mse_weights00000020.h5'
 
 t = Thor(img_a, img_b, patch_a, patch_b, perts, pert_corners)
-size = 300
-x0 = 50
-y0 = 50
+size = 100
+x0 = 150
+y0 = 150
 
 h_gt = t.h_ab
 color_gt = [0, 255, 0]
@@ -28,8 +31,11 @@ color_orb = [0, 255, 255]
 h_cnn = t.cnn_4points_estimate(model_weights)
 color_cnn = [0, 0, 255]
 
+#h_cnn = t.cnn_homography_estimate(model_weights)
+
 h = [h_gt, h_sift, h_orb, h_cnn]
 colors = [color_gt, color_sift, color_orb, color_cnn]
+
 
 out_a, out_b = t.multiple_project(h, colors, x0, y0, size)
 

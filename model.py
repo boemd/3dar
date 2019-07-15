@@ -123,7 +123,7 @@ class HomographyNN:
         Loads the saved weights in the model
         :param file: path of the file containing the weights
         """
-        self.model.load_weights(file + "_weights.h5")
+        self.model.load_weights(file)
         return
 
     def load_all(self, file):

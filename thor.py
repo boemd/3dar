@@ -120,7 +120,20 @@ class Thor:
         input[:, :, :, 1] = self.patch_b
         input = input/255
 
-        perturbations = net.predict(input)
+        perturbations = np.multiply(net.predict(input), 32)
+
+        '''
+        perturbations_0 = perturbations
+        perturbations[0, 0] = perturbations_0[0, 1]
+        perturbations[0, 1] = perturbations_0[0, 0]
+        perturbations[0, 2] = perturbations_0[0, 3]
+        perturbations[0, 3] = perturbations_0[0, 2]
+        perturbations[0, 4] = perturbations_0[0, 5]
+        perturbations[0, 5] = perturbations_0[0, 4]
+        perturbations[0, 6] = perturbations_0[0, 7]
+        perturbations[0, 7] = perturbations_0[0, 6]
+        '''
+
         p_corners = self.corners.astype(np.float32) + np.reshape(perturbations, (4, 2))
         pgt = self.p_corners - self.corners
 
