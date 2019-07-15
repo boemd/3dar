@@ -39,7 +39,7 @@ class HomographyNN:
         model1 = Sequential()
         model1.add(InputLayer(input_shape=(128, 128, 2), batch_size=self.batch_size, name='input_layer'))
 
-        model1.add(Conv2D(64, 3, name='conv_64_1'))
+        model1.add(Conv2D(64, (3, 3), name='conv_64_1'))
         model1.add(BatchNormalization(name='batch_norm_1'))
         model1.add(Activation('relu', name='relu_1'))
 
@@ -115,7 +115,7 @@ class HomographyNN:
         Saves the weights in a .h5 file
         :param file: name of the file in which to save the model
         """
-        self.model.save_weights(file + "_weights.h5")
+        self.model.save_weights(file)
         return
 
     def load_weights(self, file):
@@ -158,7 +158,6 @@ class HomographyNN:
                                                         save_weights_only=True, period=5)
 
         self.cb = [callback_learning_rate, callback_early_stopping, callback_checkpoint]
-
 
     def compile(self):
         """

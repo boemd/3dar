@@ -3,6 +3,7 @@ import scipy.io
 import numpy as np
 import copy
 from model import HomographyNN
+from numpy.linalg import norm
 
 
 class Thor:
@@ -14,34 +15,40 @@ class Thor:
                  perturbations='',
                  pert_corners=''
                  ):
-        self.img_a = cv2.imread(img_a_name)
+        # Read the input image
+        img_a_tmp = cv2.imread(img_a_name, cv2.IMREAD_GRAYSCALE)
+        self.img_a = cv2.cvtColor(img_a_tmp, cv2.COLOR_GRAY2BGR)
 
+        # Read the patches
         self.patch_a = cv2.imread(patch_a_name, cv2.IMREAD_GRAYSCALE)
         self.patch_b = cv2.imread(patch_b_name, cv2.IMREAD_GRAYSCALE)
 
+        # Get the ground truth data
         self.h_ab, self.corners, self.p_corners = self.gt_homography(perturbations, pert_corners)
 
+        # Read or compute the distorted image
         if img_b_name is not None:
-            self.img_b = cv2.imread(img_b_name, cv2.IMREAD_GRAYSCALE)
+            img_b_tmp = cv2.imread(img_b_name, cv2.IMREAD_GRAYSCALE)
         else:
-            b, g, r = cv2.split(self.img_a)
-            b = cv2.warpPerspective(b, self.h_ab, b.shape)
-            g = cv2.warpPerspective(g, self.h_ab, g.shape)
-            r = cv2.warpPerspective(r, self.h_ab, r.shape)
-            self.img_b = cv2.merge((b, g, r))
+            img_b_tmp = cv2.warpPerspective(img_a_tmp, self.h_ab, (img_a_tmp.shape[1], img_a_tmp.shape[0]))
+        self.img_b = cv2.cvtColor(img_b_tmp, cv2.COLOR_GRAY2BGR)
 
+        # Homographies that are going to be computed
         self.h_sift = None
         self.h_orb = None
         self.h_cnn = None
 
     def cv_sift_homography_estimate(self):
         """
-        estimate the homography using the classical method
+        Estimate the homography using the classical SIFT-based method
         :return: estimation of the homography
         """
+        img_a = self.patch_a
+        img_b = cv2.warpPerspective(img_a, self.h_ab, img_a.shape)
+
         sift = cv2.xfeatures2d.SIFT_create()
-        kp1, des1 = sift.detectAndCompute(self.img_a, None)
-        kp2, des2 = sift.detectAndCompute(self.img_b, None)
+        kp1, des1 = sift.detectAndCompute(img_a, None)
+        kp2, des2 = sift.detectAndCompute(img_b, None)
 
         FLANN_INDEX_KDTREE = 0
         index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
@@ -67,22 +74,25 @@ class Thor:
 
     def cv_orb_homography_estimate(self):
         """
-        estimate the homography using the classical method
+        Estimate the homography using the classical ORB-based method
         :return: estimation of the homography
         """
+        img_a = self.patch_a
+        img_b = cv2.warpPerspective(img_a, self.h_ab, img_a.shape)
+
         orb = cv2.ORB_create()
 
-        kp1, des1 = orb.detectAndCompute(self.img_a, None)
+        kp1, des1 = orb.detectAndCompute(img_a, None)
 
-        kp2, des2 = orb.detectAndCompute(self.img_b, None)
+        kp2, des2 = orb.detectAndCompute(img_b, None)
 
         bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
         matches = bf.match(des1, des2)
-        dmatches = sorted(matches, key = lambda x:x.distance)
+        matches = sorted(matches, key = lambda x:x.distance)
 
         # extract the matched keypoints
-        src_pts = np.float32([kp1[m.queryIdx].pt for m in dmatches]).reshape(-1, 1, 2)
-        dst_pts = np.float32([kp2[m.trainIdx].pt for m in dmatches]).reshape(-1, 1, 2)
+        src_pts = np.float32([kp1[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+        dst_pts = np.float32([kp2[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
 
         # find homography matrix and do perspective transform
         M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
@@ -90,6 +100,10 @@ class Thor:
         return M
 
     def cnn_homography_estimate(self, weights_path):
+        """
+        Estimate the homography using the CNN-based method
+        :return: estimation of the homography
+        """
         net = HomographyNN()
         net.build_model()
         net.load_weights(weights_path)
@@ -99,7 +113,7 @@ class Thor:
         input = np.zeros([1, height, width, 2])
         input[:, :, :, 0] = self.patch_a
         input[:, :, :, 1] = self.patch_b
-        input = input/255
+        input = (input - 127.5)/127.5
 
         h = net.predict(input)
         h = np.append(h, 1)
@@ -118,24 +132,13 @@ class Thor:
         input = np.zeros([1, height, width, 2])
         input[:, :, :, 0] = self.patch_a
         input[:, :, :, 1] = self.patch_b
-        input = input/255
+        input = (input - 127.5)/127.5
+        #input = input/255
 
+        # Offsets
         perturbations = np.multiply(net.predict(input), 32)
 
-        '''
-        perturbations_0 = perturbations
-        perturbations[0, 0] = perturbations_0[0, 1]
-        perturbations[0, 1] = perturbations_0[0, 0]
-        perturbations[0, 2] = perturbations_0[0, 3]
-        perturbations[0, 3] = perturbations_0[0, 2]
-        perturbations[0, 4] = perturbations_0[0, 5]
-        perturbations[0, 5] = perturbations_0[0, 4]
-        perturbations[0, 6] = perturbations_0[0, 7]
-        perturbations[0, 7] = perturbations_0[0, 6]
-        '''
-
         p_corners = self.corners.astype(np.float32) + np.reshape(perturbations, (4, 2))
-        pgt = self.p_corners - self.corners
 
         corners = np.reshape(self.corners.astype(np.float32), (4, 2))
 
@@ -144,7 +147,7 @@ class Thor:
 
         return h
 
-    def multiple_project(self, h_s, colors, x0=5, y0=5, sz=50):
+    def multiple_project(self, h_s, colors, x0=5, y0=5, sz=50, names=[]):
         pt0 = np.array([x0, y0, 1]).transpose()
         pt1 = np.array([x0 + sz, y0, 1]).transpose()
         pt2 = np.array([x0 + sz, y0 + sz, 1]).transpose()
@@ -157,10 +160,9 @@ class Thor:
 
         pts = np.array([pt0_2d, pt1_2d, pt2_2d, pt3_2d], np.int32)
         pts = pts.reshape((-1, 1, 2))
-        #out_a = cv2.polylines(cv2.cvtColor(self.img_a, cv2.COLOR_GRAY2BGR), [pts], True, colors[0])
         out_a = cv2.polylines(self.img_a, [pts], True, colors[0])
-        out_b = self.img_b #cv2.cvtColor(self.img_b, cv2.COLOR_GRAY2BGR)
-
+        out_b = self.img_b
+        gt = []
         for i in range(len(h_s)):
             h = h_s[i]
             color = colors[i]
@@ -186,12 +188,19 @@ class Thor:
             pts1 = pts1.reshape((-1, 1, 2))
             out_b = cv2.polylines(out_b, [pts1], True, color)
 
+            if i == 0:
+                gt = pts1
+            else:
+                diff = gt - pts1
+                mce_0 = (norm(diff[0]) + norm(diff[1]) + norm(diff[2]) + norm(diff[3]))/4
+                print(mce_0)
+                out_b = cv2.putText(out_b, names[i] + ': MCE= {:02.4f}'.format(mce_0), (0, 25*i),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+
+
+
+
         return out_a, out_b
-
-
-
-
-
 
     def project(self, h, sz=30, color=(0, 255, 0)):
         pt0 = np.array([5, 5, 1]).transpose()
@@ -227,63 +236,6 @@ class Thor:
         pts1 = np.array([pt01, pt11, pt21, pt31], np.int32)
         pts1 = pts1.reshape((-1, 1, 2))
         out_b = cv2.polylines(cv2.cvtColor(self.img_b, cv2.COLOR_GRAY2BGR), [pts1], True, color)
-
-        return out_a, out_b
-
-    def project2(self, sz=30):
-        color_gt = (0, 255, 0)
-        color_est = (0, 255, 255)
-
-        pt0 = np.array([5, 5, 1]).transpose()
-        pt01 = np.matmul(self.h_ab, pt0)
-        pt01 = np.divide(pt01, pt01[2])
-        pt02 = np.matmul(self.h_est, pt0)
-        pt02 = np.divide(pt02, pt02[2])
-
-        pt1 = np.array([sz, 5, 1]).transpose()
-        pt11 = np.matmul(self.h_ab, pt1)
-        pt11 = np.divide(pt11, pt11[2])
-        pt12 = np.matmul(self.h_est, pt1)
-        pt12 = np.divide(pt12, pt12[2])
-
-        pt2 = np.array([sz, sz, 1]).transpose()
-        pt21 = np.matmul(self.h_ab, pt2)
-        pt21 = np.divide(pt21, pt21[2])
-        pt22 = np.matmul(self.h_est, pt2)
-        pt22 = np.divide(pt22, pt22[2])
-
-        pt3 = np.array([5, sz, 1]).transpose()
-        pt31 = np.matmul(self.h_ab, pt3)
-        pt31 = np.divide(pt31, pt31[2])
-        pt32 = np.matmul(self.h_est, pt3)
-        pt32 = np.divide(pt32, pt32[2])
-
-        pt0 = np.delete(pt0, 2)
-        pt1 = np.delete(pt1, 2)
-        pt2 = np.delete(pt2, 2)
-        pt3 = np.delete(pt3, 2)
-
-        pt01 = np.delete(pt01, 2)
-        pt11 = np.delete(pt11, 2)
-        pt21 = np.delete(pt21, 2)
-        pt31 = np.delete(pt31, 2)
-
-        pt02 = np.delete(pt02, 2)
-        pt12 = np.delete(pt12, 2)
-        pt22 = np.delete(pt22, 2)
-        pt32 = np.delete(pt32, 2)
-
-        pts = np.array([pt0, pt1, pt2, pt3], np.int32)
-        pts = pts.reshape((-1, 1, 2))
-        out_a = cv2.polylines(cv2.cvtColor(self.img_a, cv2.COLOR_GRAY2BGR), [pts], True, color_gt)
-
-        pts1 = np.array([pt01, pt11, pt21, pt31], np.int32)
-        pts1 = pts1.reshape((-1, 1, 2))
-        out_b = cv2.polylines(cv2.cvtColor(self.img_b, cv2.COLOR_GRAY2BGR), [pts1], True, color_gt)
-
-        pts2 = np.array([pt02, pt12, pt22, pt32], np.int32)
-        pts2 = pts2.reshape((-1, 1, 2))
-        out_b = cv2.polylines(out_b, [pts2], True, color_est)
 
         return out_a, out_b
 
